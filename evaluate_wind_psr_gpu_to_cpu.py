@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug  7 11:23:59 2024
+Created on Fri Aug  9 10:27:39 2024
 
 @author: forootan
 """
+
+
+###################################
+###################################
 
 
 import numpy as np
@@ -79,8 +83,9 @@ from wind_loss import wind_loss_func
 from wind_trainer import Trainer
 
 
-######################################
-######################################
+###################################
+###################################
+
 
 # Example usage
 nc_file_path = 'nc_files/dataset-projections-2020/ps_EUR-11_MPI-M-MPI-ESM-LR_rcp85_r3i1p1_GERICS-REMO2015_v1_3hr_202001010100-202012312200.nc'
@@ -138,13 +143,6 @@ combined_array = combine_data(scaled_target_points, scaled_unix_time_array,
 
 
 
-##########################################
-##########################################
-
-
-
-
-
 # Check the shape of the combined array
 print(combined_array.shape)
 
@@ -153,112 +151,81 @@ type(combined_array)
 
 wind_dataset_instance = WindDataGen(combined_array[:,:5], combined_array[:,5:])
 
-test_data_size = 0.05
+test_data_size = 0.2
 
 
-x_train, u_train, train_test_loaders = wind_dataset_instance.prepare_data_random(test_data_size)
+x_train, u_train, train_test_loaders = wind_dataset_instance.prepare_data_random(0.9)
 
 
-hidden_layers = 4
+
+# Access the test_loader from train_test_loaders
+test_loader = train_test_loaders[1]
+
+# Iterate through the test_loader to get batches of data
+for x_test_batch, u_test_batch in test_loader:
+    # Now x_test_batch contains the features and u_test_batch contains the targets
+    print(x_test_batch)
+    print(u_test_batch)
+    break  # Remove this break if you want to iterate over all batches
+
+
+# Access the test_loader from train_test_loaders
+test_loader = train_test_loaders[1]
+
+# Calculate the number of batches and print batch sizes
+num_batches = len(test_loader)
+print(f"Number of batches in test_loader: {num_batches}")
+
+# Loop through the test_loader to see the size of each batch
+#for i, (x_test_batch, u_test_batch) in enumerate(test_loader, 1):
+#    print(f"Batch {i}: Size of x_test_batch = {x_test_batch.size()}, Size of u_test_batch = {u_test_batch.size()}")
+
+
+##############################################################
+
+
+
+##########################################
+##########################################
+
+
+
+##################################
+##################################
+
+num_epochs = 10000
+
+
+
+hidden_layers = 8
 hidden_features = 128
 
 
-WindDeepModel_instance = WindDeepModel(
-    in_features=5,
-    out_features=1,
-    hidden_features_str= hidden_features,
-    hidden_layers= hidden_layers,
-    learning_rate_inr=1e-5,)
-
-models_list, optim_adam, scheduler = WindDeepModel_instance.run()
-
-model_str = models_list[0]
-
-
-num_epochs = 10000
-prec = 1 - test_data_size
-
-
-
-
-
-
-Train_inst = Trainer(
-    model_str,
-    num_epochs=num_epochs,
-    optim_adam=optim_adam,
-    scheduler=scheduler,
-    wind_loss_func = wind_loss_func
-)
-
-
-loss_func_list = Train_inst.train_func(
-    train_test_loaders[0]
-)
-
-print(loss_func_list)
-
-
-import numpy as np
-
-# Save the NumPy array
-np.save(f'model_repo/loss_func_list_{num_epochs}_{hidden_features}_{hidden_layers}.npy', loss_func_list[0])
-
-# To load it back later
-loaded_loss = np.load(f'model_repo/loss_func_list_{num_epochs}_{hidden_features}_{hidden_layers}.npy')
-
-
-##########################################
-##########################################
-
-import torch
-
-# Define the paths to save the model
-model_save_path_gpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
-model_save_path_cpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_cpu.pth'
-
-# Save the trained model for GPU
-torch.save(model_str.state_dict(), model_save_path_gpu)
-print(f"Model saved to {model_save_path_gpu}")
-
-# Save the trained model for CPU
-torch.save(model_str.state_dict(), model_save_path_cpu, _use_new_zipfile_serialization=False)
-print(f"Model saved to {model_save_path_cpu}")
-
-# Alternatively, save a CPU-compatible version directly by remapping the state dictionary
-cpu_state_dict = {k: v.to('cpu') for k, v in model_str.state_dict().items()}
-torch.save(cpu_state_dict, model_save_path_cpu)
-print(f"CPU model saved to {model_save_path_cpu}")
-
-
-##########################################
-##########################################
 
 # Saving the model and using it!
 
 # Define the path to save the model
-#model_save_path_gpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
+model_save_path = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}.pth'
 
 # Save the trained model
-#torch.save(model_str.state_dict(), model_save_path_gpu)
-#print(f"Model saved to {model_save_path_gpu}")
+#torch.save(model_str.state_dict(), model_save_path)
+#print(f"Model saved to {model_save_path}")
 
-#model_save_path_cpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_cpu.pth'
-
-# Save the trained model
-torch.save(model_str.state_dict(), model_save_path_cpu, map_location=torch.device("cpu"))
-print(f"Model saved to {model_save_path_cpu}")
 
 # Define the path where the model is saved
-model_load_path = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
+model_load_path = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}.pth'
+
+
+###################################
+###################################
 
 # Create a model instance
 loaded_model_instance = WindDeepModel(
     in_features=5,
     out_features=1,
-    hidden_features_str= hidden_features,
-    hidden_layers= hidden_layers,
-    learning_rate_inr=2e-5,
+    hidden_features_str = hidden_features,
+    hidden_layers = hidden_layers,
+    learning_rate_inr=1e-5,
 )
 
 # Initialize the internal model
@@ -266,27 +233,10 @@ loaded_model_list, _, _ = loaded_model_instance.run()
 loaded_model = loaded_model_list[0]
 
 # Load the saved state dictionary into the model
-loaded_model.load_state_dict(torch.load(model_load_path))
+loaded_model.load_state_dict(torch.load(model_load_path, map_location=torch.device('cpu')))
 print(f"Model loaded from {model_load_path}")
 
-# Set the model to evaluation mode (if you are going to use it for inference)
-loaded_model.eval()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Save the model's state dictionary for CPU usage
+torch.save(loaded_model.state_dict(), f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_cpu.pth')
 

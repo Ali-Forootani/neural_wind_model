@@ -117,8 +117,8 @@ class WindDataGen(DataPreparation):
 
         batch_size_1 = x_train.shape[0]
 
-        train_loader = self.data_loader(x_train, u_train, 2500)
-        test_loader = self.data_loader(x_test, u_test, 2500)
+        train_loader = self.data_loader(x_train, u_train, 10000)
+        test_loader = self.data_loader(x_test, u_test, 10000)
        
         
 
