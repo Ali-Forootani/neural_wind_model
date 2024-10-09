@@ -177,10 +177,255 @@ class Trainer(WindTrain):
 ################################################
 
 
+# Define the RNN Trainer
+class RNNTrainer(WindTrain):
+    def __init__(
+        self,
+        model,
+        optim_adam,
+        scheduler,
+        num_epochs=1500,
+        learning_rate=1e-5
+    ):
+        super().__init__()
+        self.model = model
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.optimizer = optim_adam
+        self.scheduler = scheduler
+        self.loss_total = []
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+
+    def train_func(self, train_loader, test_loader):
+        loop = tqdm(range(self.num_epochs), leave=False)
+
+        for epoch in loop:
+            self.model.train()
+            loss_data_total = 0
+            start_time = time.time()
+
+            for batch_idx, (input_data, output_data) in enumerate(train_loader):
+                input_data = input_data.to(self.device)
+                output_data = output_data.to(self.device)
+
+                self.optimizer.zero_grad()
+                u_pred = self.model(input_data)
+                
+                # Check if u_pred is a tuple and extract the tensor if necessary
+                if isinstance(u_pred, tuple):
+                    u_pred = u_pred[0]  # Extract the output tensor from the tuple
+
+                # Debug: Print shapes
+                #print(f"Shape of u_pred: {u_pred.shape}")
+                #print(f"Shape of output_data: {output_data.shape}")
+
+                # Ensure u_pred and output_data have the same shape
+                if u_pred.shape != output_data.shape:
+                    print(f"Shape mismatch: u_pred {u_pred.shape}, output_data {output_data.shape}")
+
+                loss = self.loss_function(output_data, u_pred)
+                loss.backward()
+                self.optimizer.step()
+
+                loss_data_total += loss.item()
+
+            self.scheduler.step()
+
+            avg_loss = loss_data_total / len(train_loader)
+            self.loss_total.append(avg_loss)
+            loop.set_postfix(training_loss=avg_loss)
+
+        self.loss_total = np.array(self.loss_total)
+        return self.loss_total
+
+    def loss_function(self, y_true, y_pred):
+        return torch.mean((y_true - y_pred) ** 2)
+    
+    
+###################################################
+###################################################
+
+
+class LSTMTrainer(WindTrain):
+    def __init__(
+        self,
+        model,
+        optim_adam,
+        scheduler,
+        num_epochs=1500,
+        learning_rate=1e-5
+    ):
+        super().__init__()
+        self.model = model
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.optimizer = optim_adam
+        self.scheduler = scheduler
+        self.loss_total = []
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+
+    def train_func(self, train_loader, test_loader):
+        loop = tqdm(range(self.num_epochs), leave=False)
+
+        for epoch in loop:
+            self.model.train()
+            loss_data_total = 0
+            start_time = time.time()
+
+            for batch_idx, (input_data, output_data) in enumerate(train_loader):
+                input_data = input_data.to(self.device)
+                output_data = output_data.to(self.device)
+
+                self.optimizer.zero_grad()
+                u_pred = self.model(input_data)
+                
+                # Check if u_pred is a tuple and extract the tensor if necessary
+                if isinstance(u_pred, tuple):
+                    u_pred = u_pred[0]  # Extract the output tensor from the tuple
+
+                # Ensure u_pred and output_data have the same shape
+                if u_pred.shape != output_data.shape:
+                    print(f"Shape mismatch: u_pred {u_pred.shape}, output_data {output_data.shape}")
+
+                loss = self.loss_function(output_data, u_pred)
+                loss.backward()
+                self.optimizer.step()
+
+                loss_data_total += loss.item()
+
+            # Validation phase
+            val_loss = self.validate(test_loader)
+
+            # Step the scheduler with the validation loss
+            self.scheduler.step(val_loss)
+
+            avg_loss = loss_data_total / len(train_loader)
+            self.loss_total.append(avg_loss)
+            loop.set_postfix(training_loss=avg_loss, validation_loss=val_loss)
+
+        self.loss_total = np.array(self.loss_total)
+        return self.loss_total
+
+    def validate(self, test_loader):
+        self.model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for batch_idx, (input_data, output_data) in enumerate(test_loader):
+                input_data = input_data.to(self.device)
+                output_data = output_data.to(self.device)
+
+                u_pred = self.model(input_data)
+                
+                # Check if u_pred is a tuple and extract the tensor if necessary
+                if isinstance(u_pred, tuple):
+                    u_pred = u_pred[0]  # Extract the output tensor from the tuple
+
+                loss = self.loss_function(output_data, u_pred)
+                val_loss += loss.item()
+
+        return val_loss / len(test_loader)
+
+    def loss_function(self, y_true, y_pred):
+        return torch.mean((y_true - y_pred) ** 2)
+
+
+####################################################
+####################################################
+
+
+class HybridModelTrainer(WindTrain):
+    def __init__(
+        self,
+        model,
+        optim_adam,
+        scheduler,
+        num_epochs=1500,
+        learning_rate=1e-5
+    ):
+        super().__init__()
+        self.model = model
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.optimizer = optim_adam
+        self.scheduler = scheduler
+        self.loss_total = []
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+
+    def train_func(self, train_loader, test_loader):
+        loop = tqdm(range(self.num_epochs), leave=False)
+
+        for epoch in loop:
+            self.model.train()
+            loss_data_total = 0
+            start_time = time.time()
+
+            for batch_idx, (input_data, output_data) in enumerate(train_loader):
+                input_data = input_data.to(self.device)
+                output_data = output_data.to(self.device)
+
+                self.optimizer.zero_grad()
+                u_pred = self.model(input_data)
+                
+                # If the model output is a tuple, extract the prediction tensor
+                if isinstance(u_pred, tuple):
+                    u_pred = u_pred[0]
+
+                # Ensure u_pred and output_data have the same shape
+                if u_pred.shape != output_data.shape:
+                    print(f"Shape mismatch: u_pred {u_pred.shape}, output_data {output_data.shape}")
+
+                loss = self.loss_function(output_data, u_pred)
+                loss.backward()
+                self.optimizer.step()
+
+                loss_data_total += loss.item()
+
+            # Validation phase
+            val_loss = self.validate(test_loader)
+
+            # Step the scheduler with the validation loss
+            self.scheduler.step(val_loss)
+
+            avg_loss = loss_data_total / len(train_loader)
+            self.loss_total.append(avg_loss)
+            loop.set_postfix(training_loss=avg_loss, validation_loss=val_loss)
+
+        self.loss_total = np.array(self.loss_total)
+        return self.loss_total
+
+    def validate(self, test_loader):
+        self.model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for batch_idx, (input_data, output_data) in enumerate(test_loader):
+                input_data = input_data.to(self.device)
+                output_data = output_data.to(self.device)
+
+                u_pred = self.model(input_data)
+                
+                # If the model output is a tuple, extract the prediction tensor
+                if isinstance(u_pred, tuple):
+                    u_pred = u_pred[0]
+
+                loss = self.loss_function(output_data, u_pred)
+                val_loss += loss.item()
+
+        return val_loss / len(test_loader)
+
+    def loss_function(self, y_true, y_pred):
+        return torch.mean((y_true - y_pred) ** 2)
 
 
 
+    
 
-
-
-
+    
+    
+    
+    

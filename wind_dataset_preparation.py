@@ -161,4 +161,217 @@ class WindDataGen(DataPreparation):
 
         return train_loader
 
-    
+###########################################
+###########################################
+###########################################
+
+
+
+# Data preparation class for RNN
+class RNNDataPreparation(DataPreparation):
+    def __init__(self, coords, data, noise_level=None, seq_length=10):
+        super().__init__(coords, data)
+        self.coords = coords
+        self.data = data
+        self.noise_level = noise_level
+        self.seq_length = seq_length
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    def prepare_data_random(self, test_data_size):
+        """
+        Apply random sampling and sequence creation for RNNs.
+        Args: test_data_size, e.g. 0.2
+        """
+        x_train, u_train, x_test, u_test = self.train_test_split(self.coords, self.data, test_data_size)
+
+        # Create sequences
+        x_train_seq, u_train_seq = self.create_sequences(x_train, u_train, self.seq_length)
+        x_test_seq, u_test_seq = self.create_sequences(x_test, u_test, self.seq_length)
+
+        train_loader = self.data_loader(x_train_seq, u_train_seq, batch_size= 2500)
+        test_loader = self.data_loader(x_test_seq, u_test_seq, batch_size= 2500, shuffle=False)
+
+        return x_train_seq, u_train_seq, train_loader, test_loader
+
+    def train_test_split(self, x, data, test_data_size):
+        x_train, x_test, data_train, data_test = train_test_split(
+            x, data, test_size=test_data_size, shuffle=False
+        )
+        x_train = np.array(x_train, dtype=np.float32)
+        data_train = np.array(data_train, dtype=np.float32)
+        x_test = np.array(x_test, dtype=np.float32)
+        data_test = np.array(data_test, dtype=np.float32)
+        return x_train, data_train, x_test, data_test
+
+    def create_sequences(self, data, target, seq_length):
+        sequences = []
+        targets = []
+        for i in range(len(data) - seq_length):
+            seq = data[i:i + seq_length]
+            label = target[i + seq_length - 1]  # Adjusted to align with the last time step
+            sequences.append(seq)
+            targets.append(label)
+        return torch.tensor(sequences, dtype=torch.float32), torch.tensor(targets, dtype=torch.float32)
+
+    def data_loader(self, X, Y, batch_size, shuffle=True):
+        X = X.to(self.device)
+        Y = Y.to(self.device)
+        return torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X, Y), batch_size=batch_size, shuffle=shuffle
+        )
+
+
+#################################################
+#################################################
+
+
+import torch
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+class LSTMDataPreparation(DataPreparation):
+    def __init__(self, coords, data, noise_level=None, seq_length=10):
+        super().__init__(coords, data)
+        self.coords = coords
+        self.data = data
+        self.noise_level = noise_level
+        self.seq_length = seq_length
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    def prepare_data_random(self, test_data_size):
+        """
+        Apply random sampling and sequence creation for LSTMs.
+        Args: test_data_size, e.g. 0.2
+        """
+        x_train, u_train, x_test, u_test = self.train_test_split(self.coords, self.data, test_data_size)
+
+        # Create sequences
+        x_train_seq, u_train_seq = self.create_sequences(x_train, u_train, self.seq_length)
+        x_test_seq, u_test_seq = self.create_sequences(x_test, u_test, self.seq_length)
+
+        # Reshape sequences for LSTM (batch_size, seq_length, num_features)
+        x_train_seq = x_train_seq.reshape(-1, self.seq_length, x_train_seq.shape[2])
+        x_test_seq = x_test_seq.reshape(-1, self.seq_length, x_test_seq.shape[2])
+
+        train_loader = self.data_loader(x_train_seq, u_train_seq, batch_size=2500)
+        test_loader = self.data_loader(x_test_seq, u_test_seq, batch_size=2500, shuffle=False)
+
+        return x_train_seq, u_train_seq, train_loader, test_loader
+
+    def train_test_split(self, x, data, test_data_size):
+        x_train, x_test, data_train, data_test = train_test_split(
+            x, data, test_size=test_data_size, shuffle=False
+        )
+        x_train = np.array(x_train, dtype=np.float32)
+        data_train = np.array(data_train, dtype=np.float32)
+        x_test = np.array(x_test, dtype=np.float32)
+        data_test = np.array(data_test, dtype=np.float32)
+        return x_train, data_train, x_test, data_test
+
+    def create_sequences(self, data, target, seq_length):
+        sequences = []
+        targets = []
+        num_features = data.shape[1]  # Number of features (columns) in data
+
+        for i in range(len(data) - seq_length):
+            seq = data[i:i + seq_length]
+            label = target[i + seq_length]  # Adjusted to align with the next time step
+            sequences.append(seq)
+            targets.append(label)
+
+        sequences = np.array(sequences, dtype=np.float32)
+        targets = np.array(targets, dtype=np.float32)
+
+        return torch.tensor(sequences), torch.tensor(targets)
+
+    def data_loader(self, X, Y, batch_size, shuffle=True):
+        X = X.to(self.device)
+        Y = Y.to(self.device)
+        return torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X, Y), batch_size=batch_size, shuffle=shuffle
+        )
+
+################################################
+################################################
+
+
+import torch
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+class HybridDataPreparation(DataPreparation):
+    def __init__(self, coords, data, noise_level=None, seq_length=10):
+        super().__init__(coords, data)
+        self.coords = coords
+        self.data = data
+        self.noise_level = noise_level
+        self.seq_length = seq_length
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    def prepare_data_random(self, test_data_size):
+        """
+        Apply random sampling and sequence creation for hybrid LSTM-Transformer models.
+        Args: test_data_size, e.g. 0.2
+        """
+        x_train, u_train, x_test, u_test = self.train_test_split(self.coords, self.data, test_data_size)
+
+        # Create sequences
+        x_train_seq, u_train_seq = self.create_sequences(x_train, u_train, self.seq_length)
+        x_test_seq, u_test_seq = self.create_sequences(x_test, u_test, self.seq_length)
+
+        # Reshape sequences for LSTM and Transformer (batch_size, seq_length, num_features)
+        x_train_seq = x_train_seq.reshape(-1, self.seq_length, x_train_seq.shape[2])
+        x_test_seq = x_test_seq.reshape(-1, self.seq_length, x_test_seq.shape[2])
+
+        train_loader = self.data_loader(x_train_seq, u_train_seq, batch_size=2500)
+        test_loader = self.data_loader(x_test_seq, u_test_seq, batch_size=2500, shuffle=False)
+
+        return x_train_seq, u_train_seq, train_loader, test_loader
+
+    def train_test_split(self, x, data, test_data_size):
+        x_train, x_test, data_train, data_test = train_test_split(
+            x, data, test_size=test_data_size, shuffle=False
+        )
+        x_train = np.array(x_train, dtype=np.float32)
+        data_train = np.array(data_train, dtype=np.float32)
+        x_test = np.array(x_test, dtype=np.float32)
+        data_test = np.array(data_test, dtype=np.float32)
+        return x_train, data_train, x_test, data_test
+
+    def create_sequences(self, data, target, seq_length):
+        sequences = []
+        targets = []
+        num_features = data.shape[1]  # Number of features (columns) in data
+
+        for i in range(len(data) - seq_length):
+            seq = data[i:i + seq_length]
+            label = target[i + seq_length]  # Adjusted to align with the next time step
+            sequences.append(seq)
+            targets.append(label)
+
+        sequences = np.array(sequences, dtype=np.float32)
+        targets = np.array(targets, dtype=np.float32)
+
+        return torch.tensor(sequences), torch.tensor(targets)
+
+    def data_loader(self, X, Y, batch_size, shuffle=True):
+        X = X.to(self.device)
+        Y = Y.to(self.device)
+        return torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X, Y), batch_size=batch_size, shuffle=shuffle
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  

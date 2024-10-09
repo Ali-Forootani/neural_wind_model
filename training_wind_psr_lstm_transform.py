@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Thu Aug 22 09:53:16 2024
+
+@author: forootan
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Aug  7 11:23:59 2024
 
 @author: forootan
@@ -59,6 +67,7 @@ import cartopy.feature as cfeature
 #####################################
 #####################################
 
+
 from wind_dataset_preparation_psr import (
     extract_pressure_for_germany,
     extract_wind_speed_for_germany,
@@ -73,10 +82,21 @@ from wind_dataset_preparation_psr import (
     )
 
 
-from wind_dataset_preparation import WindDataGen
-from wind_deep_simulation_framework import WindDeepModel
+from wind_dataset_preparation import (WindDataGen,
+                                      RNNDataPreparation,
+                                      LSTMDataPreparation,
+                                      HybridDataPreparation)
+
+from wind_deep_simulation_framework import (WindDeepModel,
+                                            RNNDeepModel,
+                                            LSTMDeepModel,
+                                            HybridLSTMTransformerModel)
 from wind_loss import wind_loss_func
-from wind_trainer import Trainer
+
+from wind_trainer import (Trainer,
+                          RNNTrainer,
+                          LSTMTrainer,
+                          HybridModelTrainer)
 
 
 ######################################
@@ -101,7 +121,7 @@ wind_speeds, grid_lats, grid_lons = extract_wind_speed_for_germany(nc_file_path)
 
 print(f"Shape of extracted wind speed: {wind_speeds.shape}")
 print(f"Sample of extracted wind speed (first 5 time steps, first 5 locations):")
-print(wind_speeds[:5, :5])
+
 
 target_points = load_real_wind_csv(csv_file_path)
 interpolated_wind_speeds = interpolate_wind_speed(wind_speeds, grid_lats, grid_lons, target_points)
@@ -137,75 +157,77 @@ combined_array = combine_data(scaled_target_points, scaled_unix_time_array,
                               scaled_wind_power)
 
 
-
-##########################################
-##########################################
-
+############################################################
+############################################################
 
 
+# Example usage
+# Prepare your dataset using HybridDataPreparation
+hybrid_data_prep = HybridDataPreparation(combined_array[:,:5], combined_array[:,5:], seq_length=10)
 
-
-# Check the shape of the combined array
-print(combined_array.shape)
-
-type(combined_array)
-
-
-wind_dataset_instance = WindDataGen(combined_array[:,:5], combined_array[:,5:])
-
+# Set the test data size
 test_data_size = 0.05
 
-
-x_train, u_train, train_test_loaders = wind_dataset_instance.prepare_data_random(test_data_size)
-
-
-hidden_layers = 4
-hidden_features = 32
+# Prepare the training and test data loaders
+x_train_seq, u_train_seq, train_loader, test_loader = hybrid_data_prep.prepare_data_random(test_data_size)
 
 
-WindDeepModel_instance = WindDeepModel(
-    in_features=5,
-    out_features=1,
-    hidden_features_str= hidden_features,
-    hidden_layers= hidden_layers,
-    learning_rate_inr=1e-5,)
+# Define the HybridLSTMTransformerModel
+input_size = 5  # Number of input features
+lstm_hidden_size = 20  # Number of LSTM hidden units, adjusted to be divisible by transformer_num_heads
+lstm_num_layers = 4  # Number of LSTM layers
+transformer_num_heads = 4   # Number of attention heads
+transformer_hidden_size = 20  # Size of the feed-forward network after attention
+transformer_num_layers = 4  # Number of transformer layers
+output_size = 1  # Number of output features
+learning_rate = 1e-3
 
-models_list, optim_adam, scheduler = WindDeepModel_instance.run()
-
-model_str = models_list[0]
-
-
-num_epochs = 10000
-prec = 1 - test_data_size
+hybrid_model_instance = HybridLSTMTransformerModel(
+    input_size, lstm_hidden_size, lstm_num_layers,
+    transformer_num_heads, transformer_hidden_size, transformer_num_layers,
+    output_size, dropout=0.1, learning_rate=learning_rate
+)
 
 
+model_str, optim_adam, scheduler = hybrid_model_instance.run()
 
 
 
 
-Train_inst = Trainer(
+
+
+#####################################################
+#####################################################
+
+
+
+
+num_epochs = 2000
+
+
+Train_inst = HybridModelTrainer(
     model_str,
     num_epochs=num_epochs,
     optim_adam=optim_adam,
     scheduler=scheduler,
-    wind_loss_func = wind_loss_func
+    
 )
 
+loss_func_list = Train_inst.train_func(train_loader, test_loader)
 
-loss_func_list = Train_inst.train_func(
-    train_test_loaders[0]
-)
 
-print(loss_func_list)
+
+
 
 
 import numpy as np
 
 # Save the NumPy array
-np.save(f'model_repo/loss_func_list_{num_epochs}_{hidden_features}_{hidden_layers}.npy', loss_func_list[0])
+np.save(f'model_repo/loss_func_list_{num_epochs}_{lstm_hidden_size}_{lstm_num_layers}_{transformer_hidden_size}_{transformer_num_layers}_hybrid.npy'
+        , loss_func_list)
 
 # To load it back later
-loaded_loss = np.load(f'model_repo/loss_func_list_{num_epochs}_{hidden_features}_{hidden_layers}.npy')
+loaded_loss = np.load(f'model_repo/loss_func_list_{num_epochs}_{lstm_hidden_size}_{lstm_num_layers}_{transformer_hidden_size}_{transformer_num_layers}_hybrid.npy')
 
 
 ##########################################
@@ -214,8 +236,8 @@ loaded_loss = np.load(f'model_repo/loss_func_list_{num_epochs}_{hidden_features}
 import torch
 
 # Define the paths to save the model
-model_save_path_gpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
-model_save_path_cpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_cpu.pth'
+model_save_path_gpu = f'model_repo/wind_deep_model_{num_epochs}_{lstm_hidden_size}_{lstm_num_layers}_{transformer_hidden_size}_{transformer_num_layers}_hybrid_gpu.pth'
+model_save_path_cpu = f'model_repo/wind_deep_model_{num_epochs}_{lstm_hidden_size}_{lstm_num_layers}_{transformer_hidden_size}_{transformer_num_layers}_hybrid_cpu.pth'
 
 # Save the trained model for GPU
 torch.save(model_str.state_dict(), model_save_path_gpu)
@@ -229,64 +251,6 @@ print(f"Model saved to {model_save_path_cpu}")
 cpu_state_dict = {k: v.to('cpu') for k, v in model_str.state_dict().items()}
 torch.save(cpu_state_dict, model_save_path_cpu)
 print(f"CPU model saved to {model_save_path_cpu}")
-
-
-##########################################
-##########################################
-
-# Saving the model and using it!
-
-# Define the path to save the model
-#model_save_path_gpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
-
-# Save the trained model
-#torch.save(model_str.state_dict(), model_save_path_gpu)
-#print(f"Model saved to {model_save_path_gpu}")
-
-#model_save_path_cpu = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_cpu.pth'
-
-# Save the trained model
-torch.save(model_str.state_dict(), model_save_path_cpu, map_location=torch.device("cpu"))
-print(f"Model saved to {model_save_path_cpu}")
-
-# Define the path where the model is saved
-model_load_path = f'model_repo/wind_deep_model_{num_epochs}_{hidden_features}_{hidden_layers}_gpu.pth'
-
-# Create a model instance
-loaded_model_instance = WindDeepModel(
-    in_features=5,
-    out_features=1,
-    hidden_features_str= hidden_features,
-    hidden_layers= hidden_layers,
-    learning_rate_inr=2e-5,
-)
-
-# Initialize the internal model
-loaded_model_list, _, _ = loaded_model_instance.run()
-loaded_model = loaded_model_list[0]
-
-# Load the saved state dictionary into the model
-loaded_model.load_state_dict(torch.load(model_load_path))
-print(f"Model loaded from {model_load_path}")
-
-# Set the model to evaluation mode (if you are going to use it for inference)
-loaded_model.eval()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
