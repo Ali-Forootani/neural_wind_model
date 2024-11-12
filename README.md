@@ -11,6 +11,9 @@ The study compares various DNN architectures, such as Multilayer Perceptron (MLP
 
 
 
+[Download PDF](./CADNN.pdf)
+
+
 ## Dependencies
 
 The following libraries are required for running the code:
