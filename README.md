@@ -1,6 +1,6 @@
 
 
-# Climate Aware Deep Neural Network for Wind Power Forecast
+# Climate Aware Deep Neural Network (CADNN) for Wind Power Forecast
 
 ## Overview
 
