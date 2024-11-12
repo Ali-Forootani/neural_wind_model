@@ -163,7 +163,7 @@ combined_array = combine_data(scaled_target_points, scaled_unix_time_array,
 
 # Example usage
 # Prepare your dataset using HybridDataPreparation
-hybrid_data_prep = HybridDataPreparation(combined_array[:,:5], combined_array[:,5:], seq_length=10)
+hybrid_data_prep = HybridDataPreparation(combined_array[:,:5], combined_array[:,5:], seq_length=1)
 
 # Set the test data size
 test_data_size = 0.05
@@ -174,11 +174,11 @@ x_train_seq, u_train_seq, train_loader, test_loader = hybrid_data_prep.prepare_d
 
 # Define the HybridLSTMTransformerModel
 input_size = 5  # Number of input features
-lstm_hidden_size = 20  # Number of LSTM hidden units, adjusted to be divisible by transformer_num_heads
-lstm_num_layers = 4  # Number of LSTM layers
+lstm_hidden_size = 64  # Number of LSTM hidden units, adjusted to be divisible by transformer_num_heads
+lstm_num_layers = 6  # Number of LSTM layers
 transformer_num_heads = 4   # Number of attention heads
 transformer_hidden_size = 20  # Size of the feed-forward network after attention
-transformer_num_layers = 4  # Number of transformer layers
+transformer_num_layers = 2  # Number of transformer layers
 output_size = 1  # Number of output features
 learning_rate = 1e-3
 
@@ -202,7 +202,7 @@ model_str, optim_adam, scheduler = hybrid_model_instance.run()
 
 
 
-num_epochs = 2000
+num_epochs = 10000
 
 
 Train_inst = HybridModelTrainer(

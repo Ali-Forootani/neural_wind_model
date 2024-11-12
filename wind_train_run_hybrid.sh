@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=my_wind_train_hybrid_job
-#SBATCH --time=0-50:30:00
+#SBATCH --time=0-70:30:00
 #SBATCH --gres=gpu:nvidia-a100:1
 #SBATCH --mem-per-cpu=32G
 #SBATCH --constraint a100-vram-80G
@@ -11,8 +11,7 @@
 
 
 # Load any necessary modules, if require
-module load Anaconda3
-source activate /data/bio-eng-llm/miniconda3/envs/gnsindy_3
+source /data/bio-eng-llm/virtual_envs/dnn_env/bin/activate
 module load python
 
 # Execute the Python script
