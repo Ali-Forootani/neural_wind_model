@@ -13,7 +13,6 @@ The study compares various DNN architectures, such as Multilayer Perceptron (MLP
 
 [Download PDF](./CADNN.pdf)
 
-![My Image](./CADNN.jpg)
 
 ## Dependencies
 
