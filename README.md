@@ -28,7 +28,8 @@ The following libraries are required for running the code:
 - `scikit-learn`
 - `tqdm`
 - `netCDF4`
-- 
+- `torch_geometric`
+  
 You can install these dependencies using `pip`:
 
 ```bash
