@@ -32,7 +32,7 @@ The following libraries are required for running the code:
 You can install these dependencies using `pip`:
 
 ```bash
-pip install numpy torch scipy pandas matplotlib cartopy scikit-learn tqdm
+pip install numpy torch scipy pandas matplotlib cartopy scikit-learn tqdm netCDF4
 ```
 
 ## Installed Packages
