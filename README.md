@@ -267,6 +267,7 @@ Saved Models & Loss Arrays
 - For Hybrid (LSTM+Transformers) you should run `training_wind_psr_lstm_transform.npy`
 - When you finished with the training you can evaluate the models with files `evaluate_wind_psr_lstm_cpu.py`, `evaluate_wind_psr.py`, and `evaluate_transform_lstm_psr.py`
 - The files such as `wind_globe_map_eu.py` is to visualize the wind statistics over EU map. The file `wind_load.sh` is to use High Performance Computing units SLRUM, but it is case specific adn     may differe from cluster to cluster.
+- An exmple of jupyte notebook also is provided `training_wind_lstm_psr.ipynb`
 
 ## **An Example of Module Structures for LSTM Framework**
 
