@@ -25,8 +25,10 @@ The following libraries are required for running the code:
 - `pandas`
 - `matplotlib`
 - `cartopy`
-- `sklearn`
+- `scikit-learn`
 - `tqdm`
+- `netCDF4`
+- 
 You can install these dependencies using `pip`:
 
 ```bash
