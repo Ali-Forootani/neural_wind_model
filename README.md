@@ -226,6 +226,182 @@ loss_func_list = LSTMTrainer(model_str, num_epochs=25000, optim_adam=optim_adam,
 torch.save(model_str.state_dict(), 'model_repo/lstm_model.pth')
 ```
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+# To use the modules and simulate the `CADNN':
+
+## **Pipeline Overview**
+
+```
+NetCDF (wind speed, pressure)  +  CSV (wind farms & power)
+          │
+          ▼
+Spatial Interpolation (farm coordinates)
+          │
+          ▼
+Scaling & Feature Combination
+          │
+          ▼
+Sequence Preparation (LSTM input)
+          │
+          ▼
+Multi-Layer (LSTM Training)
+          │
+          ▼
+Saved Models & Loss Arrays
+```
+
+- The dataset used in this study is available on [Zenodo](https://zenodo.org/records/14979073) and [Zenodo](https://zenodo.org/records/15736940) and `Results_2020_REMix_ReSTEP_hourly_REF.csv`.         Create a folder and rename it `nc_files`.
+
+- For LSTM framework you should run `training_wind_psr_lstm.py`
+- For MLP framework you should run `training_wind_psr.npy`
+- For Hybrid (LSTM+Transformers) you should run `training_wind_psr_lstm_transform.npy`
+- When you finished with the training you can evaluate the models with files `evaluate_wind_psr_lstm_cpu.py`, `evaluate_wind_psr.py`, and `evaluate_transform_lstm_psr.py`
+- The files such as `wind_globe_map_eu.py` is to visualize the wind statistics over EU map. The file `wind_load.sh` is to use High Performance Computing units SLRUM, but it is case specific adn     may differe from cluster to cluster.
+
+## **An Example of Module Structures for LSTM Framework**
+
+```
+.
+├── wind_main_lstm_simulation.py         # Main simulation script
+├── wind_dataset_preparation_psr.py      # Data extraction & preprocessing
+├── wind_dataset_preparation.py          # Dataset preparation for LSTM
+├── wind_deep_simulation_framework.py    # Model definitions (LSTM)
+├── wind_trainer.py                      # Training loop & optimizers
+├── wind_loss.py                         # Custom loss functions
+├── model_repo/                          # Saved models & loss arrays
+└── nc_files/ & CSV files                # NetCDF and real wind data
+```
+
+---
+
+## **1. Main Simulation Script**
+
+**File:** `wind_main_lstm_simulation.py`
+
+This is the **entry point** of the framework.
+It integrates all components: **data extraction, preprocessing, model training, and saving results**.
+
+**Main Steps:**
+
+1. **Load & Interpolate Data**
+
+   * `extract_pressure_for_germany()` → Load surface pressure from NetCDF.
+   * `extract_wind_speed_for_germany()` → Load wind speed from NetCDF.
+   * `load_real_wind_csv()` → Load wind farm coordinates & power data.
+   * `interpolate_wind_speed()` / `interpolate_pressure()` → Interpolate gridded data to wind farm locations.
+2. **Scale & Combine Features**
+
+   * `scale_interpolated_data()`, `scale_target_points()` → Normalize features to $[-1,1]$.
+   * `repeat_target_points()` → Expand wind farm coordinates across time.
+   * `combine_data()` → Merge all features into one dataset.
+3. **Prepare Dataset for Training**
+
+   * `LSTMDataPreparation.prepare_data_random()` → Generate sequences for training/testing.
+4. **Model Training**
+
+   * `LSTMDeepModel()` → Define multi-layer LSTM.
+   * `LSTMTrainer.train_func()` → Train the model with Adam optimizer.
+5. **Save Outputs**
+
+   * Trained model: `.pth` (GPU & CPU versions).
+   * Training loss: `.npy`.
+
+---
+
+## **2. Data Extraction & Preprocessing**
+
+**File:** `wind_dataset_preparation_psr.py`
+
+Provides **functions for handling NetCDF & CSV data**.
+
+### **Data Extraction**
+
+* `extract_wind_speed_for_germany(nc_file)`
+  Extract **10m wind speed** for Germany from rotated-pole CORDEX NetCDF files.
+* `extract_pressure_for_germany(nc_file)`
+  Extract **surface pressure** from CORDEX NetCDF files.
+* `load_real_wind_csv(csv_file_path)`
+  Load **wind farm coordinates & measured power output** from CSV.
+
+### **Interpolation**
+
+* `interpolate_wind_speed(wind_speeds, grid_lats, grid_lons, target_points)`
+  Interpolate gridded wind speeds onto wind farm coordinates.
+* `interpolate_pressure(data, grid_lats, grid_lons, target_points)`
+  Interpolate gridded pressure values onto wind farm coordinates.
+
+### **Temporal Processing**
+
+* `loading_wind()`
+  Load wind power CSV, **clean missing values**, and **resample to 3-hourly** to match NetCDF.
+* `map_unix_time_to_range()`
+  Normalize timestamps to $[-1,1]$.
+
+### **Feature Scaling & Combination**
+
+* `scale_target_points(target_points)` → Normalize wind farm coordinates.
+* `scale_interpolated_data(data)` → Scale wind speed & pressure per time step.
+* `repeat_target_points(scaled_target_points, num_time_steps)` → Duplicate farm coordinates across all time steps.
+* `combine_data()` → Combine all features (coordinates, time, pressure, wind speed, power).
+
+---
+
+## **3. Model & Training**
+
+* **`wind_deep_simulation_framework.py`** → Defines deep learning models:
+
+  * `WindDeepModel`, `RNNDeepModel`, `LSTMDeepModel`.
+* **`wind_trainer.py`** → Implements training loop:
+
+  * `Trainer`, `RNNTrainer`, `LSTMTrainer`.
+* **`wind_loss.py`** → Custom loss functions for wind power forecasting.
+
+---
+
+## **Input/Output**
+
+### **Inputs**
+
+* **NetCDF**:
+
+  * Wind speed (10m) and surface pressure for Germany.
+* **CSV**:
+
+  * Wind farm coordinates (lat/lon).
+  * Hourly wind power generation data.
+
+### **Outputs**
+
+* **Trained Model:**
+
+  * `.pth` (GPU and CPU versions).
+* **Training Loss:**
+
+  * `.npy` loss progression during training.
+* **Preprocessed Dataset:**
+
+  * Combined spatiotemporal feature arrays.
+
+---
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 ## Notes
 
 - The code uses GPU if available for faster training.
