@@ -152,6 +152,22 @@ pressure_data, grid_lats, grid_lons = extract_pressure_for_germany(nc_file_path)
 wind_speeds, grid_lats, grid_lons = extract_wind_speed_for_germany(nc_file_path)
 ```
 
+- or use the following to directly download the `.nc` files
+
+```bash
+# Create a target folder (optional)
+mkdir -p data && cd data
+
+# Record 14979073
+wget -c --content-disposition \
+  "https://zenodo.org/records/14979073/files/ps_EUR-11_MPI-M-MPI-ESM-LR_rcp85_r3i1p1_GERICS-REMO2015_v1_3hr_202001010100-202012312200.nc?download=1"
+
+# Record 15736940
+wget -c --content-disposition \
+  "https://zenodo.org/records/15736940/files/Klima_Daten_10m_3h_2020_RCP26.nc?download=1"
+
+```
+
 ### Step 2: Data Scaling and Preprocessing
 
 Once the data is loaded, it's scaled to prepare it for training. The wind speed, pressure, and wind power data are all normalized using MinMax scaling. This scaling ensures that the model can efficiently learn from the data.
