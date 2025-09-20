@@ -152,7 +152,7 @@ pressure_data, grid_lats, grid_lons = extract_pressure_for_germany(nc_file_path)
 wind_speeds, grid_lats, grid_lons = extract_wind_speed_for_germany(nc_file_path)
 ```
 
-- or use the following to directly download the `.nc` files
+- Or use the following to directly download the `.nc` files
 
 ```bash
 # Create a target folder (optional)
@@ -167,6 +167,37 @@ wget -c --content-disposition \
   "https://zenodo.org/records/15736940/files/Klima_Daten_10m_3h_2020_RCP26.nc?download=1"
 
 ```
+
+- Or in `Python`
+
+```python
+# ================================
+# Download required .nc files (Zenodo)
+# ================================
+
+import os
+
+# Create target folder
+os.makedirs("nc_files", exist_ok=True)
+
+# List of dataset URLs from Zenodo
+urls = [
+    "https://zenodo.org/records/14979073/files/example1.nc",  # replace with real file names
+    "https://zenodo.org/records/15736940/files/example2.nc"   # replace with real file names
+]
+
+# Download each file if not already present
+for url in urls:
+    filename = os.path.join("nc_files", url.split("/")[-1])
+    if not os.path.exists(filename):
+        print(f"Downloading {url} ...")
+        !wget -O {filename} {url}
+    else:
+        print(f"{filename} already exists, skipping.")
+
+```
+
+
 
 ### Step 2: Data Scaling and Preprocessing
 
@@ -284,6 +315,24 @@ Saved Models & Loss Arrays
 - When you finished with the training you can evaluate the models with files `evaluate_wind_psr_lstm_cpu.py`, `evaluate_wind_psr.py`, and `evaluate_transform_lstm_psr.py`
 - The files such as `wind_globe_map_eu.py` is to visualize the wind statistics over EU map. The file `wind_load.sh` is to use High Performance Computing units SLRUM, but it is case specific adn     may differe from cluster to cluster.
 - An exmple of jupyte notebook also is provided `training_wind_lstm_psr.ipynb`
+
+#### Using the Jupyter Notebook
+To reproduce the experiments step-by-step, open the Jupyter notebook:
+
+`training_wind_lstm_psr.ipynb`
+
+This notebook:
+- Automatically downloads the required `.nc` files from Zenodo into the `nc_files/` folder,
+- Prepares the dataset,
+- Trains the LSTM-based model,
+- Evaluates and visualizes results.
+
+To run it:
+1. Install Jupyter (`pip install notebook`).
+2. Start Jupyter with `jupyter notebook`.
+3. Open `training_wind_lstm_psr.ipynb` and run all cells sequentially.
+
+
 
 ## **An Example of Module Structures for LSTM Framework**
 
